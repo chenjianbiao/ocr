@@ -250,7 +250,8 @@ class FontCheck(object):
                     return False
         except:
             print("fail to load:%s" % font_path)
-            traceback.print_exc(file=sys.stdout)
+            # traceback.print_exc(file=sys.stdout)
+            traceback.print_exc()
             return False
         return True
 
@@ -286,6 +287,147 @@ class Font2Image(object):
         else:
             print("image doesn't exist.")
 
+# chinese_labels里数据格式(ID,汉字）
+def get_label_dict():
+    f=open('./chinese_labels','r')
+    label_dict=pickle.load(f)
+    f.close()
+    return label_dict
 
+
+def args_parse():
+    #解析输入参数
+    parser = argparse.ArgumentParser(
+        description=description, formatter_class=RawTextHelpFormatter)
+    parser.add_argument('--out_dir', dest='out_dir',
+                        default=None, required=True,
+                        help='write a caffe dir')
+    parser.add_argument('--font_dir', dest='font_dir',
+                        default=None, required=True,
+                        help='font dir to to produce images')
+    parser.add_argument('--test_ratio', dest='test_ratio',
+                        default=0.2, required=False,
+                        help='test dataset size')
+    parser.add_argument('--width', dest='width',
+                        default=None, required=True,
+                        help='width')
+    parser.add_argument('--height', dest='height',
+                        default=None, required=True,
+                        help='height')
+    parser.add_argument('--no_crop', dest='no_crop',
+                        default=True, required=False,
+                        help='', action='store_true')
+    parser.add_argument('--margin', dest='margin',
+                        default=0, required=False,
+                        help='', )
+    parser.add_argument('--rotate', dest='rotate',
+                        default=0, required=False,
+                        help='max rotate degree 0-45')
+    parser.add_argument('--rotate_step', dest='rotate_step',
+                        default=0, required=False,
+                        help='rotate step for the rotate angle')
+    parser.add_argument('--need_aug', dest='need_aug',
+                        default=False, required=False,
+                        help='need data augmentation', action='store_true')
+    args = vars(parser.parse_args())
+    return args
+
+if __name__=="main":
+    description='''
+    python get_printed_char.py --out_dir ./dataset\
+    --font_dir ./chinese_fonts\
+    --width 30 --height 30  --margin 4 --rotate 30 --rotate step 1
+    '''
+    options=args_parse()
+    out_dir = os.path.expanduser(options['out_dir'])
+    font_dir = os.path.expanduser(options['font_dir'])
+    test_ratio = float(options['test_ratio'])
+    width = int(options['width'])
+    height = int(options['height'])
+    need_crop = not options['no_crop']
+    margin = int(options['margin'])
+    rotate = int(options['rotate'])
+    need_aug = options['need_aug']
+    rotate_step = int(options['rotate_step'])
+    train_image_dir_name = "train"
+    test_image_dir_name = "test"
+
+    #dataset 划分
+    train_images_dir=os.path.join(out_dir,train_image_dir_name)
+    test_images_dir=os.path.join(out_dir,test_image_dir_name)
+
+    if os.path.isdir(train_images_dir):
+        shutil.rmtree(train_images_dir)
+    os.makedirs(train_images_dir)
+    if os.path.isdir(test_images_dir):
+        shutil.rmtree(test_images_dir)
+    os.makedirs(test_images_dir)
+
+    # 将汉字的label读入，得到（ID：汉字）的映射表label_dict
+    label_dict = get_label_dict()
+
+    char_list=[] #汉字列表
+    value_list=[] #label列表
+    for (value,chars) in label_dict.items():
+        print(value,chars)
+        char_list.append(chars)
+        value_list.append(value)
+
+    # 合并成新的映射关系表：（汉字：ID）
+    lang_chars = dict(zip(char_list,value_list))
+    font_check = FontCheck(lang_chars)
+
+    if rotate<0:
+        rotate=-rotate
+    if rotate>0 and rotate<=45:
+        all_rotate_angles=[]
+        for i in range(0,rotate+1,rotate_step):
+            all_rotate_angles.append(i)
+        for i in range(-rotate, 0, rotate_step):
+            all_rotate_angles.append(i)
+
+    # 对于每类字体进行小批量测试
+    verified_font_paths = []
+    ## search for file fonts
+    for font_name in os.listdir(font_dir):
+        path_font_file = os.path.join(font_dir, font_name)
+        if font_check.do(path_font_file):
+            verified_font_paths.append(path_font_file)
+
+    font2image = Font2Image(width, height, need_crop, margin)
+
+    for(char,value) in lang_chars.items():
+        image_list=[]
+        print(char,value)
+        for j, verified_font_path in enumerate(verified_font_paths):    # 内层循环是字体
+            if rotate == 0:
+                image = font2image.do(verified_font_path, char)
+                image_list.append(image)
+            else:
+                for k in all_rotate_angles:
+                    image = font2image.do(verified_font_path, char, rotate=k)
+                    image_list.append(image)
+
+        if need_aug:
+            data_aug = dataAugmentation()
+            image_list = data_aug.do(image_list)
+
+        test_num = len(image_list) * test_ratio
+        random.shuffle(image_list)  # 图像列表打乱
+        count = 0
+        for i in range(len(image_list)):
+            img = image_list[i]
+            # print(img.shape)
+            if count < test_num:
+                char_dir = os.path.join(test_images_dir, "%0.5d" % value)
+            else:
+                char_dir = os.path.join(train_images_dir, "%0.5d" % value)
+
+            if not os.path.isdir(char_dir):
+                os.makedirs(char_dir)
+
+            path_image = os.path.join(char_dir, "%d.png" % count)
+            cv2.imwrite(path_image, img)
+            count += 1
 
 
