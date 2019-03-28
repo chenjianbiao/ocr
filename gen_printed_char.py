@@ -1,17 +1,11 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import cv2
-import numpy as np
+
 from PIL import Image,ImageDraw,ImageFont
-import FindImageBBox
-
-import PIL
-
 import pickle
-import  argparse
-from argparse import  RawTextHelpFormatter
-
+import argparse
+from argparse import RawTextHelpFormatter
 import os
 import cv2
 import random
@@ -334,7 +328,7 @@ def args_parse():
 
 if __name__=="main":
     description='''
-    python get_printed_char.py --out_dir ./dataset\
+    python gen_printed_char.py --out_dir ./dataset\
     --font_dir ./chinese_fonts\
     --width 30 --height 30  --margin 4 --rotate 30 --rotate step 1
     '''
