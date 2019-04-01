@@ -15,7 +15,7 @@ import traceback
 import copy
 
 
-class dataAugmentation(object):
+class DataAugmentation(object):
     def __init__(self, noise=True, dilate=True, erode=True):
         self.noise = noise
         self.dilate = dilate
@@ -280,7 +280,7 @@ class Font2Image(object):
             left, upper, right, lower = cropped_box
             np_img = np_img[upper:lower + 1, left:right + 1]
             if not self.need_crop:
-                preprocess_resize_keep_ratio_fill_bg = PreprocessResizeKeepRatioFillBG();
+                preprocess_resize_keep_ratio_fill_bg = PreprocessResizeKeepRatioFillBG(self.width,self.hight,fill_bg=False,margin=self.margin)
                 np_img = preprocess_resize_keep_ratio_fill_bg.do(np_img)
                 return np_img
         else:
@@ -289,7 +289,7 @@ class Font2Image(object):
 
 # chinese_labels里数据格式(ID,汉字）
 def get_label_dict():
-    f = open('./chinese_labels', 'r')
+    f = open('./chinese_labels', 'rb')
     label_dict = pickle.load(f)
     f.close()
     return label_dict
@@ -333,12 +333,14 @@ def args_parse():
     return args
 
 
-if __name__ == "main":
+if __name__ == "__main__":
+    print('begin debug.....')
     description = '''
     python gen_printed_char.py --out_dir ./dataset\
     --font_dir ./chinese_fonts\
     --width 30 --height 30  --margin 4 --rotate 30 --rotate step 1
     '''
+
     options = args_parse()
     out_dir = os.path.expanduser(options['out_dir'])
     font_dir = os.path.expanduser(options['font_dir'])
@@ -356,7 +358,7 @@ if __name__ == "main":
     # dataset 划分
     train_images_dir = os.path.join(out_dir, train_image_dir_name)
     test_images_dir = os.path.join(out_dir, test_image_dir_name)
-
+    print(train_images_dir)
     if os.path.isdir(train_images_dir):
         shutil.rmtree(train_images_dir)
     os.makedirs(train_images_dir)
@@ -410,7 +412,7 @@ if __name__ == "main":
                     image_list.append(image)
 
         if need_aug:
-            data_aug = dataAugmentation()
+            data_aug = DataAugmentation()
             image_list = data_aug.do(image_list)
 
         test_num = len(image_list) * test_ratio
