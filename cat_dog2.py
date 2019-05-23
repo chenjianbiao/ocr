@@ -1,7 +1,7 @@
 import os, shutil
 
-original_dataset_dir = '/Users/fchollet/Downloads/kaggle_original_data'
-base_dir = '/Users/fchollet/Downloads/cats_and_dogs_small'
+original_dataset_dir = 'd:/kaggledata/kaggle_original_data'
+base_dir = 'd:/kaggledata/cats_and_dogs_small'
 os.mkdir(base_dir)
 train_dir = os.path.join(base_dir, 'train')
 os.mkdir(train_dir)

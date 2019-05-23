@@ -254,18 +254,18 @@ class FontCheck(object):
 
 
 class Font2Image(object):
-    def __init__(self, width, hight, need_crop, margin):
+    def __init__(self, width, height, need_crop, margin):
         self.width = width
-        self.hight = hight
+        self.height = height
         self.need_crop = need_crop
         self.margin = margin
 
     def do(self, font_path, char, rotate=0):
         find_image_bbox = FindImageBBox()
-        img = Image.new('RGB', (self.width, self.hight), self.margin)
+        img = Image.new('RGB', (self.width, self.height), "black")
         draw = ImageDraw.Draw(img)
         font = ImageFont.truetype(font_path, int(self.width * 0.7), )
-        draw.text((0, 0), char, (255, 255, 2555), font)
+        draw.text((0, 0), char, (255, 255, 255), font)
         if rotate != 0:
             img.rotate(rotate)
         data = list(img.getdata())
@@ -275,12 +275,12 @@ class Font2Image(object):
         if sum_val > 2:
             np_img = np.asarray(data, dtype='uint8')
             np_img = np_img[:, 0]
-            np_img = np_img.reshape((self.width, self.hight))
+            np_img = np_img.reshape((self.width, self.height))
             cropped_box = find_image_bbox.do(np_img)
             left, upper, right, lower = cropped_box
             np_img = np_img[upper:lower + 1, left:right + 1]
             if not self.need_crop:
-                preprocess_resize_keep_ratio_fill_bg = PreprocessResizeKeepRatioFillBG(self.width,self.hight,fill_bg=False,margin=self.margin)
+                preprocess_resize_keep_ratio_fill_bg = PreprocessResizeKeepRatioFillBG(self.width,self.height,fill_bg=False,margin=self.margin)
                 np_img = preprocess_resize_keep_ratio_fill_bg.do(np_img)
                 return np_img
         else:
